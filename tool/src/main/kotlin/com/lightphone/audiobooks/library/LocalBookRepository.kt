@@ -14,6 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
+import java.io.IOException
 import java.security.MessageDigest
 
 private const val AUDIOBOOKS_DIRECTORY = "Audiobooks"
@@ -35,6 +36,15 @@ sealed interface LocalScanResult {
  * (scan_cache.json in the tool's filesDir) means unchanged files are never
  * re-read — only new/changed files hit MediaMetadataRetriever.
  */
+/** A corrupt metadata file never replaces imported tags or stops audio scanning.
+ *  Save operations will still fail safely until the damaged file is repaired. */
+private fun Audiobook.applyStoredOverrides(): Audiobook = try {
+    withEffectiveMetadata(BookMetadataStore.read(source, id))
+} catch (error: IOException) {
+    System.err.println("Audiobooks: unable to load saved book metadata: ${error.message}")
+    this
+}
+
 object LocalBookRepository {
     /** Tool Manager upload directory, relative to the tool's filesDir — must
      *  match the FileBrowserSpec path in ToolEntryPoint. */
@@ -44,6 +54,7 @@ object LocalBookRepository {
     private val mutableBooks = MutableStateFlow<List<Audiobook>>(emptyList())
     private val mutableScanResult = MutableStateFlow<LocalScanResult?>(null)
     private val mutableScanning = MutableStateFlow(false)
+    val discoveryError = MutableStateFlow<String?>(null)
     private var scanGeneration = 0
 
     // Scan metadata cache: absolute path -> metadata for that file, keyed by
@@ -85,6 +96,13 @@ object LocalBookRepository {
         val generation = ++scanGeneration
         return try {
             val result = scanFresh(generation)
+            // Record only successful discoveries. Never erase history after
+            // an empty, denied, interrupted, or temporarily inaccessible scan.
+            if (result is LocalScanResult.Success) {
+                runCatching { LibraryDiscoveryStore.recordNewBooks(result.books) }
+                    .onSuccess { discoveryError.value = null }
+                    .onFailure { discoveryError.value = "Unable to save Recently Added history." }
+            }
             val snapshot = (result as? LocalScanResult.Success)?.books.orEmpty()
             mutableBooks.value = snapshot
             mutableScanResult.value = result
@@ -110,7 +128,7 @@ object LocalBookRepository {
                 completed = stored.completed,
                 lastPlayedAtMilliseconds = stored.lastPlayedAtMilliseconds,
                 lastUpdatedAtMilliseconds = stored.lastUpdatedAtMilliseconds,
-            )
+            ).applyStoredOverrides()
         }
         mutableBooks.value = updated
         updated
@@ -295,7 +313,8 @@ object LocalBookRepository {
 
         if (cacheDirty) persistCache(cache)
 
-        val books = accepted.values.sortedBy { it.title.lowercase() }
+        val books = accepted.values.map { it.applyStoredOverrides() }
+            .sortedBy { it.title.lowercase() }
         when {
             books.isNotEmpty() -> LocalScanResult.Success(books)
             !folderExists -> LocalScanResult.FolderMissing

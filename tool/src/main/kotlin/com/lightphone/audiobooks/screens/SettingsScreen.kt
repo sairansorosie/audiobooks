@@ -138,7 +138,7 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
                         }
                     }
                     LightText(
-                        text = "Scan Library Now",
+                        text = "Sync Library",
                         variant = LightTextVariant.Heading,
                         modifier = Modifier
                             .fillMaxWidth()

@@ -35,9 +35,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+internal val playbackSpeedOptions: List<Float> =
+    listOf(0.5f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
 class SpeedPickerViewModel : AppLightViewModel<Float>() {
 
-    val speeds = listOf(0.5f, 1.0f, 1.25f, 1.5f, 2.0f)
+    val speeds = playbackSpeedOptions
     val current = MutableStateFlow(1.0f)
 
     override fun onScreenShow(screen: SimpleLightScreen<Float>) {

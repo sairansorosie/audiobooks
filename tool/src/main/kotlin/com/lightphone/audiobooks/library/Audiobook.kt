@@ -36,6 +36,14 @@ data class Audiobook(
     val lastUpdatedAtMilliseconds: Long = 0,
     val fileSizeBytes: Long = 0,
     val parts: List<AudiobookPart> = emptyList(),
+    // Imported tags/fallback are retained even after a local override.
+    val importedTitle: String = title,
+    val importedAuthor: String = author,
+    val importedSeriesName: String? = null,
+    val importedSeriesPosition: String? = null,
+    val seriesName: String? = null,
+    val seriesPosition: String? = null,
+    val metadataOverrides: BookMetadataOverrides = BookMetadataOverrides(),
 ) {
     val progressPercent: Int
         get() = if (durationMilliseconds > 0) {

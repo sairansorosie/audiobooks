@@ -1,6 +1,10 @@
 package com.lightphone.audiobooks
 
 import com.lightphone.audiobooks.library.AudiobookProgressStore
+import com.lightphone.audiobooks.library.BookMetadataStore
+import com.lightphone.audiobooks.library.LibraryViewPreferenceStore
+import com.lightphone.audiobooks.library.LibrarySortPreferenceStore
+import com.lightphone.audiobooks.library.LibraryDiscoveryStore
 import com.lightphone.audiobooks.library.LocalBookRepository
 import com.lightphone.audiobooks.library.PlaybackSettingsStore
 import java.io.File
@@ -23,6 +27,10 @@ object AudiobookLibrary {
             if (initialized) return
             PlaybackSettingsStore.init(filesDir)
             AudiobookProgressStore.init(filesDir)
+            BookMetadataStore.init(filesDir)
+            LibraryViewPreferenceStore.init(filesDir)
+            LibrarySortPreferenceStore.init(filesDir)
+            LibraryDiscoveryStore.init(filesDir)
             LocalBookRepository.init(filesDir)
             initialized = true
         }

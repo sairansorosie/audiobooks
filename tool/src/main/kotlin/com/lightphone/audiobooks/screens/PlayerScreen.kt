@@ -9,11 +9,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
@@ -27,6 +36,8 @@ import com.lightphone.audiobooks.formatSpeed
 import com.lightphone.audiobooks.formatTime
 import com.lightphone.audiobooks.library.Audiobook
 import com.lightphone.audiobooks.library.AudiobookProgressStore
+import com.lightphone.audiobooks.library.BookMetadataStore
+import com.lightphone.audiobooks.library.withEffectiveMetadata
 import com.lightphone.audiobooks.library.EmbeddedChapter
 import com.lightphone.audiobooks.library.PlaybackSettingsStore
 import com.lightphone.audiobooks.partStartMs
@@ -55,9 +66,11 @@ import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTouchableProgressBar
 import com.thelightphone.sdk.ui.lightClickable
+import com.thelightphone.sdk.ui.gridUnitsAsDp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -123,6 +136,7 @@ class PlayerViewModel(
     private var lastChapterPartIndex = -1
     private var lastChapterIndex = -1
     private var pendingSeekMs: Long? = null
+    private var resettingProgress = false
 
     override fun onScreenShow(screen: SimpleLightScreen<Unit>) {
         super.onScreenShow(screen)
@@ -327,7 +341,31 @@ class PlayerViewModel(
             // periodic save.
             saveProgress()
         }
-        if (autoPlay) p.play()
+        if (autoPlay) playAndRecord(p)
+    }
+
+    /** Record only actual playback of this book, not opening a preview or rescan. */
+    private suspend fun playAndRecord(p: LightAudioPlayer) {
+        val references = book.parts.map { it.playbackReference }.filter(String::isNotBlank)
+            .ifEmpty { listOf(book.playbackReference) }
+        val expected = references.map { android.net.Uri.fromFile(File(it)).toString() }
+        p.play()
+        val started = withTimeoutOrNull(20_000L) {
+            kotlinx.coroutines.flow.combine(p.isPlaying, p.queue) { playing, queue ->
+                playing && queue.map { it.id } == expected
+            }.first { it }
+        } == true
+        if (started && PlayerSession.loadedBookId == book.id) {
+            try {
+                withContext(Dispatchers.IO) {
+                    AudiobookProgressStore.recordPlaybackStarted(book)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("Audiobooks", "Could not save playback history", e)
+            }
+        }
     }
 
     fun togglePlay() {
@@ -339,7 +377,7 @@ class PlayerViewModel(
             } else if (_ui.value.live) {
                 maybeRestartEnded(p)
                 maybeRewindAfterPause(p)
-                p.play()
+                playAndRecord(p)
             } else {
                 // In preview the play button means "play this book" even if
                 // another book is currently playing — never pause the other
@@ -455,13 +493,51 @@ class PlayerViewModel(
         seekToGlobal(p, _ui.value.positionMs - REWIND_MS)
     }
 
+    /** Refresh the displayed labels only; do not alter the live audio queue. */
+    fun refreshDisplayedMetadata() {
+        viewModelScope.launch {
+            try {
+                val updated = withContext(Dispatchers.IO) {
+                    book.withEffectiveMetadata(BookMetadataStore.read(book.source, book.id))
+                }
+                _ui.update {
+                    it.copy(
+                        title = updated.title,
+                        author = updated.author.takeIf(String::isNotBlank),
+                    )
+                }
+            } catch (e: Exception) {
+                System.err.println("Audiobooks: unable to refresh edited book labels: ${e.message}")
+            }
+        }
+    }
+
+    /** Pause/reset only this screen's loaded queue; never touch previewed audio. */
+    suspend fun pauseForProgressClear() {
+        if (PlayerSession.loadedBookId != book.id) return
+        resettingProgress = true
+        try {
+            val p = player() ?: throw java.io.IOException("Player unavailable for progress reset")
+            pauseAndRewindLoadedQueue(p, book)
+            _ui.update { it.copy(positionMs = 0L, partIndex = 0, playing = false) }
+        } finally {
+            resettingProgress = false
+        }
+    }
+
+    fun showClearedProgress() {
+        _ui.update { it.copy(positionMs = 0L, partIndex = 0, playing = false) }
+    }
+
     private fun saveProgress() {
-        if (!_ui.value.live) return
+        if (!_ui.value.live || resettingProgress) return
         lastSavedAt = System.currentTimeMillis()
         val state = _ui.value
+        val generation = AudiobookProgressStore.progressGeneration(book.source, book.id)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                AudiobookProgressStore.saveLocal(book, state.positionMs, state.durationMs, state.speed)
+                AudiobookProgressStore.saveLocal(book, state.positionMs, state.durationMs,
+                    state.speed, expectedGeneration = generation)
             }
         }
     }
@@ -537,6 +613,20 @@ class PlayerScreen(
         val ui by viewModel.ui.collectAsState()
         val hasPlayed by viewModel.hasPlayed.collectAsState()
         val themeColors by LightThemeController.colors.collectAsState()
+        var menuOpen by remember { mutableStateOf(false) }
+        var speedMenuOpen by remember { mutableStateOf(false) }
+        var speedMenuAnchor by remember { mutableStateOf(IntRect.Zero) }
+        val speedDensity = LocalDensity.current
+        val speedAnchorHalfWidth = with(speedDensity) { 36.dp.roundToPx() }
+        val speedAnchorHalfHeight = with(speedDensity) { 12.dp.roundToPx() }
+        var menuAnchor by remember { mutableStateOf(IntRect.Zero) }
+        var markedFinished by remember(book.id) { mutableStateOf(book.completed) }
+        var markError by remember { mutableStateOf<String?>(null) }
+        var markInFlight by remember { mutableStateOf(false) }
+        var clearOpen by remember { mutableStateOf(false) }
+        var clearError by remember { mutableStateOf<String?>(null) }
+        var clearInFlight by remember { mutableStateOf(false) }
+        val markScope = rememberCoroutineScope()
         val chapters = embeddedChapters(book)
 
         LightTheme(colors = themeColors) {
@@ -546,13 +636,38 @@ class PlayerScreen(
                         .fillMaxSize()
                         .background(LightThemeTokens.colors.background),
                 ) {
-                    LightTopBar(
-                        leftButton = LightBarButton.LightIcon(
-                            icon = LightIcons.BACK,
-                            onClick = { goBack() },
-                            contentDescription = "Back",
-                        ),
-                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        LightTopBar(
+                            leftButton = LightBarButton.LightIcon(
+                                icon = LightIcons.BACK,
+                                onClick = { goBack() },
+                                contentDescription = "Back",
+                            ),
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 1f.gridUnitsAsDp())
+                                .size(3f.gridUnitsAsDp())
+                                .lightClickable(
+                                    onClickLabel = "More options for ${ui.title}",
+                                    onClick = {
+                                        speedMenuOpen = false
+                                        menuOpen = true
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            LightIcon(
+                                icon = LightIcons.ELLIPSES,
+                                modifier = Modifier.rotate(90f)
+                                    .onGloballyPositioned { menuAnchor = popupAnchorBounds(it) },
+                                // Same SDK icon size as the top bar's Back control.
+                                size = 2f,
+                                contentDescription = "More options for ${ui.title}",
+                            )
+                        }
+                    }
                     Box(modifier = Modifier.weight(1f)) {
                     val embeddedIndex = if (chapters.isNotEmpty()) {
                         chapterIndexAt(
@@ -582,7 +697,19 @@ class PlayerScreen(
                     )
                     }
                 LightBottomBar(
-                    modifier = Modifier.navigationBarsPadding(),
+                    modifier = Modifier.navigationBarsPadding()
+                        .onGloballyPositioned { coordinates ->
+                            val bar = popupAnchorBounds(coordinates)
+                            val centerX = (bar.left + bar.right) / 2
+                            val centerY = (bar.top + bar.bottom) / 2
+                            val measured = IntRect(
+                                centerX - speedAnchorHalfWidth,
+                                centerY - speedAnchorHalfHeight,
+                                centerX + speedAnchorHalfWidth,
+                                centerY + speedAnchorHalfHeight,
+                            )
+                            if (speedMenuAnchor != measured) speedMenuAnchor = measured
+                        },
                     items = listOf(
                         LightBarButton.LightIcon(
                             icon = LightIcons.SETTINGS,
@@ -594,7 +721,10 @@ class PlayerScreen(
                         // a preview — it never needs the book loaded.
                         LightBarButton.Text(
                             text = formatSpeed(ui.speed),
-                            onClick = { openSpeedPicker() },
+                            onClick = {
+                                menuOpen = false
+                                speedMenuOpen = true
+                            },
                         ),
                         // Chapters view from the book's own data; a tap from a
                         // preview loads this book paused at the chosen chapter
@@ -608,19 +738,91 @@ class PlayerScreen(
                 )
                 }
             }
+            if (speedMenuOpen && speedMenuAnchor != IntRect.Zero) {
+                PlaybackSpeedMenu(
+                    anchorBounds = speedMenuAnchor,
+                    selectedSpeed = ui.speed,
+                    onSelect = { speed ->
+                        speedMenuOpen = false
+                        viewModel.setSpeed(speed)
+                    },
+                    onDismiss = { speedMenuOpen = false },
+                )
+            }
+            if (menuOpen) {
+                BookActionsMenu(
+                    anchorBounds = menuAnchor,
+                    title = ui.title,
+                    completed = markedFinished,
+                    hasListeningProgress = ui.positionMs > 0L,
+                    onClearProgress = {
+                        menuOpen = false
+                        clearError = null
+                        clearOpen = true
+                    },
+                    markError = markError,
+                    markInFlight = markInFlight,
+                    onMarkFinished = {
+                        if (!markInFlight) {
+                            markInFlight = true
+                            markScope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching { AudiobookProgressStore.markFinished(book) }
+                                }
+                                markInFlight = false
+                                if (result.isSuccess) {
+                                    markedFinished = true
+                                    markError = null
+                                    menuOpen = false
+                                } else {
+                                    markError = "Could not mark this book finished. Please try again."
+                                }
+                            }
+                        }
+                    },
+                    onDismiss = { if (!markInFlight) menuOpen = false },
+                    onEdit = {
+                        menuOpen = false
+                        navigateTo(screenFactory = { EditBookDetailsScreen(it, book) }) { saved ->
+                            if (saved) viewModel.refreshDisplayedMetadata()
+                        }
+                    },
+                )
+            }
+            if (clearOpen) {
+                ClearProgressConfirmation(
+                    title = ui.title,
+                    inFlight = clearInFlight,
+                    error = clearError,
+                    onCancel = { if (!clearInFlight) clearOpen = false },
+                    onConfirm = {
+                        if (!clearInFlight) {
+                            clearInFlight = true
+                            markScope.launch {
+                                val result = runCatching {
+                                    viewModel.pauseForProgressClear()
+                                    withContext(Dispatchers.IO) {
+                                        AudiobookProgressStore.clearListeningProgress(book)
+                                    }
+                                }
+                                clearInFlight = false
+                                if (result.isSuccess) {
+                                    markedFinished = false
+                                    viewModel.showClearedProgress()
+                                    clearOpen = false
+                                } else {
+                                    clearError = "Could not clear progress. Please try again."
+                                }
+                            }
+                        }
+                    },
+                )
+            }
         }
     }
 
     private fun openSettings() {
         navigateTo(screenFactory = { SettingsScreen(it) })
-    }
-
-    /** The chosen speed is returned as the navigation result and applied here,
-     *  so the selection survives the picker screen's teardown. */
-    private fun openSpeedPicker() {
-        navigateTo(screenFactory = { SpeedPickerScreen(it) }) { speed ->
-            viewModel.setSpeed(speed)
-        }
     }
 
     private fun openChapters() {
