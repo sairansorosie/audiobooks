@@ -35,3 +35,11 @@ Audiobooks also depends on AndroidX, Jetpack Compose, Kotlin, and Kotlin Corouti
 components distributed under their respective open-source licenses. Those
 projects retain their own copyright and licensing terms; this notice does not
 replace them.
+
+## Lucide Icons
+
+The Series and Standalone Books heading icons are adapted from Lucide's
+`library-big` and `book` vector designs. Copyright (c) 2026 Lucide Icons
+and Contributors. Licensed under the ISC License. See
+[tool/third_party/lucide-icons/LICENSE](tool/third_party/lucide-icons/LICENSE)
+for the complete notice and terms.

@@ -1,3 +1,5 @@
+> Historical transition document: reflects the initial November 3 audit, not the final MVP state. For the current implementation, scope, and release gates, see `MVP_SCOPE_AND_BACKLOG_2026-11-03.md`.
+
 # Light Audiobooks: Project transition brief
 
 **As of November 3, 2026.** This file is a continuity note, not a replacement for the PRD or Phase Playbook.
