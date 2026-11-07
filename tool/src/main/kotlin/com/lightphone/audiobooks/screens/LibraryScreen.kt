@@ -308,7 +308,7 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                     LightText(
                         text = "Audiobooks",
                         variant = LightTextVariant.Heading,
-                        modifier = Modifier.padding(start = 24.dp, bottom = 4.dp),
+                        modifier = Modifier.padding(start = 24.dp, bottom = 8.dp),
                     )
                     if (hasSeries) {
                         LibraryViewTabs(
