@@ -308,7 +308,7 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                     LightText(
                         text = "Audiobooks",
                         variant = LightTextVariant.Heading,
-                        modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),
+                        modifier = Modifier.padding(start = 24.dp, bottom = 8.dp),
                     )
                     if (hasSeries) {
                         LibraryViewTabs(
@@ -327,7 +327,7 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                     if (!loading || books.isNotEmpty()) {
                         Row(
                             modifier = Modifier.fillMaxWidth()
-                                .padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+                                .padding(start = 24.dp, end = 24.dp, bottom = 4.dp)
                                 .heightIn(min = 48.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -614,7 +614,7 @@ private fun LibrarySortMenu(
 
 @Composable
 private fun LibraryViewTabs(selected: LibraryView, onSelect: (LibraryView) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 4.dp)) {
         LibraryViewTab(
             label = "ALL BOOKS",
             selected = selected == LibraryView.AllBooks,
