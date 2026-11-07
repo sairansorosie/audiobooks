@@ -10,4 +10,3 @@ capabilities = ["detached-audio", "tool-manager-provider"]
 # the /sdcard/Audiobooks scan, stores, and playback file access run
 # in-process (no embedded LightSdkService, no separate companion APK).
 serverPackage = "com.lightos"
-orientation = "portrait"
