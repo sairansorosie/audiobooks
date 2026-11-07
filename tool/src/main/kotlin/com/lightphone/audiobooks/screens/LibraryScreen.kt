@@ -324,43 +324,6 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                             },
                         )
                     }
-                    if (!loading || books.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .padding(start = 24.dp, end = 24.dp, bottom = 0.dp)
-                                .heightIn(min = 48.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            LightText(
-                                text = if (activeView == LibraryView.Series)
-                                    seriesHeaderCount(seriesLibrary.groups.size) else libraryBookCountLabel(books),
-                                variant = LightTextVariant.Detail,
-                                // Match the sort control's vertical inset in both tabs.
-                                // This keeps the count baseline fixed when sort is absent.
-                                modifier = Modifier.weight(1f).padding(vertical = 6.dp),
-                            )
-                            if (activeView == LibraryView.AllBooks) {
-                                Row(
-                                    modifier = Modifier
-                                        .onGloballyPositioned { sortAnchor = popupAnchorBounds(it) }
-                                        .lightClickable(onClickLabel = "Sort All Books") {
-                                            sortMenuOpen = true
-                                        }
-                                        .heightIn(min = 48.dp)
-                                        .padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    LightText(text = librarySortLabel(selectedSort), variant = LightTextVariant.Paragraph)
-                                    LightIcon(
-                                        icon = LightIcons.DOWN,
-                                        modifier = Modifier.offset(y = (-3).dp),
-                                        size = 1.0f,
-                                        contentDescription = null,
-                                    )
-                                }
-                            }
-                        }
-                    }
                     viewError?.let { message ->
                         LightText(
                             text = message,
@@ -383,74 +346,113 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        when {
-                            loading && books.isEmpty() -> StatusText("Scanning your library…")
-                            books.isEmpty() -> StatusText(
-                                "No books found. Copy audiobooks into the Audiobooks folder on your device.",
-                            )
-                            else -> key(activeView) {
-                                LightScrollView(
-                                    scrollState = if (activeView == LibraryView.Series) seriesScroll else allBooksScroll,
-                                ) {
-                                    if (activeView == LibraryView.Series) {
-                                        seriesLibrary.groups.forEachIndexed { groupIndex, group ->
-                                            // Section boundaries use whitespace; dividers appear only between books.
-                                            if (groupIndex > 0) Spacer(modifier = Modifier.height(22.dp))
-                                            SeriesSectionHeader(name = group.name, count = group.books.size)
-                                            group.books.forEachIndexed { bookIndex, book ->
+                        key(activeView) {
+                            LightScrollView(
+                                scrollState = if (activeView == LibraryView.Series) seriesScroll else allBooksScroll,
+                            ) {
+                                if (!loading || books.isNotEmpty()) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                            .padding(start = 24.dp, end = 24.dp, bottom = 0.dp)
+                                            .heightIn(min = 48.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        LightText(
+                                            text = if (activeView == LibraryView.Series)
+                                                seriesHeaderCount(seriesLibrary.groups.size) else libraryBookCountLabel(books),
+                                            variant = LightTextVariant.Detail,
+                                            // Match the sort control's vertical inset in both tabs.
+                                            // This keeps the count baseline fixed when sort is absent.
+                                            modifier = Modifier.weight(1f).padding(vertical = 6.dp),
+                                        )
+                                        if (activeView == LibraryView.AllBooks) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .onGloballyPositioned { sortAnchor = popupAnchorBounds(it) }
+                                                    .lightClickable(onClickLabel = "Sort All Books") {
+                                                        sortMenuOpen = true
+                                                    }
+                                                    .heightIn(min = 48.dp)
+                                                    .padding(start = 8.dp, top = 6.dp, bottom = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                LightText(text = librarySortLabel(selectedSort), variant = LightTextVariant.Paragraph)
+                                                LightIcon(
+                                                    icon = LightIcons.DOWN,
+                                                    modifier = Modifier.offset(y = (-3).dp),
+                                                    size = 1.0f,
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                when {
+                                    loading && books.isEmpty() -> StatusText("Scanning your library…")
+                                    books.isEmpty() -> StatusText(
+                                        "No books found. Copy audiobooks into the Audiobooks folder on your device.",
+                                    )
+                                    else -> {
+                                        if (activeView == LibraryView.Series) {
+                                            seriesLibrary.groups.forEachIndexed { groupIndex, group ->
+                                                // Section boundaries use whitespace; dividers appear only between books.
+                                                if (groupIndex > 0) Spacer(modifier = Modifier.height(22.dp))
+                                                SeriesSectionHeader(name = group.name, count = group.books.size)
+                                                group.books.forEachIndexed { bookIndex, book ->
+                                                    BookRow(
+                                                        book = book,
+                                                        onOpen = { openPlayer(book) },
+                                                        onMenu = { bounds ->
+                                                            sortMenuOpen = false
+                                                            menuAnchor = bounds
+                                                            menuBook = book
+                                                            markError = null
+                                                        },
+                                                        showSeriesLabel = false,
+                                                        seriesNumber = seriesVolumeLabel(book),
+                                                        showDivider = bookIndex < group.books.lastIndex,
+                                                    )
+                                                }
+                                            }
+                                            if (seriesLibrary.standaloneBooks.isNotEmpty()) {
+                                                // Standalone books follow the same book-only divider rule.
+                                                if (seriesLibrary.groups.isNotEmpty()) {
+                                                    Spacer(modifier = Modifier.height(22.dp))
+                                                }
+                                                SeriesSectionHeader(
+                                                    name = "Standalone Books",
+                                                    count = seriesLibrary.standaloneBooks.size,
+                                                    multipleBooks = false,
+                                                )
+                                                seriesLibrary.standaloneBooks.forEachIndexed { bookIndex, book ->
+                                                    BookRow(
+                                                        book = book,
+                                                        onOpen = { openPlayer(book) },
+                                                        onMenu = { bounds ->
+                                                            sortMenuOpen = false
+                                                            menuAnchor = bounds
+                                                            menuBook = book
+                                                            markError = null
+                                                        },
+                                                        showSeriesLabel = false,
+                                                        showDivider = bookIndex < seriesLibrary.standaloneBooks.lastIndex,
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            sortedBooks.forEachIndexed { index, book ->
                                                 BookRow(
                                                     book = book,
                                                     onOpen = { openPlayer(book) },
                                                     onMenu = { bounds ->
-                                                        sortMenuOpen = false
-                                                        menuAnchor = bounds
-                                                        menuBook = book
-                                                        markError = null
-                                                    },
-                                                    showSeriesLabel = false,
-                                                    seriesNumber = seriesVolumeLabel(book),
-                                                    showDivider = bookIndex < group.books.lastIndex,
+                                                            sortMenuOpen = false
+                                                            menuAnchor = bounds
+                                                            menuBook = book
+                                                            markError = null
+                                                        },
+                                                    showDivider = index < sortedBooks.lastIndex,
                                                 )
                                             }
-                                        }
-                                        if (seriesLibrary.standaloneBooks.isNotEmpty()) {
-                                            // Standalone books follow the same book-only divider rule.
-                                            if (seriesLibrary.groups.isNotEmpty()) {
-                                                Spacer(modifier = Modifier.height(22.dp))
-                                            }
-                                            SeriesSectionHeader(
-                                                name = "Standalone Books",
-                                                count = seriesLibrary.standaloneBooks.size,
-                                                multipleBooks = false,
-                                            )
-                                            seriesLibrary.standaloneBooks.forEachIndexed { bookIndex, book ->
-                                                BookRow(
-                                                    book = book,
-                                                    onOpen = { openPlayer(book) },
-                                                    onMenu = { bounds ->
-                                                        sortMenuOpen = false
-                                                        menuAnchor = bounds
-                                                        menuBook = book
-                                                        markError = null
-                                                    },
-                                                    showSeriesLabel = false,
-                                                    showDivider = bookIndex < seriesLibrary.standaloneBooks.lastIndex,
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        sortedBooks.forEachIndexed { index, book ->
-                                            BookRow(
-                                                book = book,
-                                                onOpen = { openPlayer(book) },
-                                                onMenu = { bounds ->
-                                                        sortMenuOpen = false
-                                                        menuAnchor = bounds
-                                                        menuBook = book
-                                                        markError = null
-                                                    },
-                                                showDivider = index < sortedBooks.lastIndex,
-                                            )
                                         }
                                     }
                                 }
