@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -627,6 +629,9 @@ class PlayerScreen(
                         .fillMaxSize()
                         .background(LightThemeTokens.colors.background),
                 ) {
+                    // Match the Library's two-grid-unit top inset. Both the
+                    // Back and book-options controls share this header container.
+                    Spacer(modifier = Modifier.height(2f.gridUnitsAsDp()))
                     Box(modifier = Modifier.fillMaxWidth()) {
                         LightTopBar(
                             leftButton = LightBarButton.LightIcon(

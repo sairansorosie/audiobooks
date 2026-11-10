@@ -3,10 +3,8 @@ package com.lightphone.audiobooks.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -37,7 +35,6 @@ import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
-import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.lightClickable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,9 +186,6 @@ internal class BookOptionsScreen(
                     modifier = Modifier.fillMaxSize()
                         .background(LightThemeTokens.colors.background),
                 ) {
-                    // Align the Book Options navigation bar with the Library's
-                    // two-grid-unit top inset. Keep the SDK top bar unchanged.
-                    Spacer(modifier = Modifier.height(2f.gridUnitsAsDp()))
                     LightTopBar(
                         leftButton = LightBarButton.LightIcon(
                             icon = LightIcons.BACK,
