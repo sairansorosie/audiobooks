@@ -2,8 +2,6 @@ package com.lightphone.audiobooks.screens
 import com.lightphone.audiobooks.formatSpeed
 
 import androidx.compose.foundation.background
-import com.thelightphone.sdk.ui.LightIcons
-import com.thelightphone.sdk.ui.LightIcon
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.size
@@ -12,7 +10,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -117,79 +114,7 @@ internal fun FinishedCheckmark(withCircle: Boolean = false, modifier: Modifier =
     }
 }
 
-@Composable
-private fun BookActionRow(
-    label: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    icon: @Composable () -> Unit,
-) {
-    androidx.compose.foundation.layout.Row(
-        modifier = Modifier.fillMaxWidth()
-            .lightClickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.size(24.dp),
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) { icon() }
-        androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-        LightText(text = label, variant = LightTextVariant.Copy)
-    }
-}
-
-/** Only implemented actions, attached to the relevant book's three-dot icon. */
-@Composable
-internal fun BookActionsMenu(
-    anchorBounds: IntRect,
-    title: String,
-    onDismiss: () -> Unit,
-    onEdit: () -> Unit,
-    completed: Boolean,
-    onMarkFinished: () -> Unit,
-    hasListeningProgress: Boolean,
-    onClearProgress: () -> Unit,
-    markError: String? = null,
-    markInFlight: Boolean = false,
-) {
-    Popup(
-        popupPositionProvider = LightAnchoredMenuPositionProvider(anchorBounds),
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true),
-    ) {
-        Column(
-            modifier = Modifier.widthIn(min = 205.dp, max = 255.dp)
-                .heightIn(max = anchoredMenuMaxHeight(anchorBounds))
-                .border(1.dp, LightThemeTokens.colors.contentSecondary.copy(alpha = 0.28f))
-                .background(LightThemeTokens.colors.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-        ) {
-            BookActionRow("Edit Book Details", enabled = !markInFlight, onClick = onEdit) {
-                LightIcon(icon = LightIcons.PENCIL, size = 1.4f,
-                    contentDescription = null)
-            }
-            if (!completed) {
-                BookActionRow("Mark as Finished", enabled = !markInFlight, onClick = onMarkFinished) {
-                    FinishedCheckmark(withCircle = true, modifier = Modifier.size(20.dp))
-                }
-            }
-            if (completed || hasListeningProgress) {
-                BookActionRow("Clear Progress", enabled = !markInFlight, onClick = onClearProgress) {
-                    LightIcon(icon = LightIcons.ROTATE, size = 1.4f,
-                        contentDescription = null)
-                }
-            }
-            markError?.let { message ->
-                LightText(text = message, variant = LightTextVariant.Detail,
-                    modifier = Modifier.padding(top = 8.dp))
-            }
-        }
-    }
-}
-
-/** Same anchored, non-dimming style and Copy-sized rows as book menus. */
+/** The speed dropdown remains intentionally lightweight and anchored. */
 @Composable
 internal fun PlaybackSpeedMenu(
     anchorBounds: IntRect,

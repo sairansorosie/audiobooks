@@ -1,3 +1,5 @@
+> **Superseded navigation requirements (November 2026):** See [Library Simplification PRD v2.1](LIBRARY_SIMPLIFICATION_PRD_v2.1.md) for the approved single Library, Series A-Z sort, and Book Options screen. Previous Series-tab and icon-bearing menu requirements are historical.
+
 # Light Audiobooks: Product Requirements Document
 
 **Version:** 1.3  

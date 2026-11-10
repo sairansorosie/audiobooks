@@ -613,20 +613,11 @@ class PlayerScreen(
         val ui by viewModel.ui.collectAsState()
         val hasPlayed by viewModel.hasPlayed.collectAsState()
         val themeColors by LightThemeController.colors.collectAsState()
-        var menuOpen by remember { mutableStateOf(false) }
         var speedMenuOpen by remember { mutableStateOf(false) }
         var speedMenuAnchor by remember { mutableStateOf(IntRect.Zero) }
         val speedDensity = LocalDensity.current
         val speedAnchorHalfWidth = with(speedDensity) { 36.dp.roundToPx() }
         val speedAnchorHalfHeight = with(speedDensity) { 12.dp.roundToPx() }
-        var menuAnchor by remember { mutableStateOf(IntRect.Zero) }
-        var markedFinished by remember(book.id) { mutableStateOf(book.completed) }
-        var markError by remember { mutableStateOf<String?>(null) }
-        var markInFlight by remember { mutableStateOf(false) }
-        var clearOpen by remember { mutableStateOf(false) }
-        var clearError by remember { mutableStateOf<String?>(null) }
-        var clearInFlight by remember { mutableStateOf(false) }
-        val markScope = rememberCoroutineScope()
         val chapters = embeddedChapters(book)
 
         LightTheme(colors = themeColors) {
@@ -653,15 +644,24 @@ class PlayerScreen(
                                     onClickLabel = "More options for ${ui.title}",
                                     onClick = {
                                         speedMenuOpen = false
-                                        menuOpen = true
+                                        navigateTo(screenFactory = {
+                                            BookOptionsScreen(it, book, onPrepareClear = { _ ->
+                                                viewModel.pauseForProgressClear()
+                                            })
+                                        }) { result ->
+                                            when (result) {
+                                                BookOptionsResult.DetailsSaved -> viewModel.refreshDisplayedMetadata()
+                                                BookOptionsResult.ClearedProgress -> viewModel.showClearedProgress()
+                                                BookOptionsResult.MarkedFinished -> Unit
+                                            }
+                                        }
                                     },
                                 ),
                             contentAlignment = Alignment.Center,
                         ) {
                             LightIcon(
                                 icon = LightIcons.ELLIPSES,
-                                modifier = Modifier.rotate(90f)
-                                    .onGloballyPositioned { menuAnchor = popupAnchorBounds(it) },
+                                modifier = Modifier.rotate(90f),
                                 // Same SDK icon size as the top bar's Back control.
                                 size = 2f,
                                 contentDescription = "More options for ${ui.title}",
@@ -722,7 +722,6 @@ class PlayerScreen(
                         LightBarButton.Text(
                             text = formatSpeed(ui.speed),
                             onClick = {
-                                menuOpen = false
                                 speedMenuOpen = true
                             },
                         ),
@@ -747,75 +746,6 @@ class PlayerScreen(
                         viewModel.setSpeed(speed)
                     },
                     onDismiss = { speedMenuOpen = false },
-                )
-            }
-            if (menuOpen) {
-                BookActionsMenu(
-                    anchorBounds = menuAnchor,
-                    title = ui.title,
-                    completed = markedFinished,
-                    hasListeningProgress = ui.positionMs > 0L,
-                    onClearProgress = {
-                        menuOpen = false
-                        clearError = null
-                        clearOpen = true
-                    },
-                    markError = markError,
-                    markInFlight = markInFlight,
-                    onMarkFinished = {
-                        if (!markInFlight) {
-                            markInFlight = true
-                            markScope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    runCatching { AudiobookProgressStore.markFinished(book) }
-                                }
-                                markInFlight = false
-                                if (result.isSuccess) {
-                                    markedFinished = true
-                                    markError = null
-                                    menuOpen = false
-                                } else {
-                                    markError = "Could not mark this book finished. Please try again."
-                                }
-                            }
-                        }
-                    },
-                    onDismiss = { if (!markInFlight) menuOpen = false },
-                    onEdit = {
-                        menuOpen = false
-                        navigateTo(screenFactory = { EditBookDetailsScreen(it, book) }) { saved ->
-                            if (saved) viewModel.refreshDisplayedMetadata()
-                        }
-                    },
-                )
-            }
-            if (clearOpen) {
-                ClearProgressConfirmation(
-                    title = ui.title,
-                    inFlight = clearInFlight,
-                    error = clearError,
-                    onCancel = { if (!clearInFlight) clearOpen = false },
-                    onConfirm = {
-                        if (!clearInFlight) {
-                            clearInFlight = true
-                            markScope.launch {
-                                val result = runCatching {
-                                    viewModel.pauseForProgressClear()
-                                    withContext(Dispatchers.IO) {
-                                        AudiobookProgressStore.clearListeningProgress(book)
-                                    }
-                                }
-                                clearInFlight = false
-                                if (result.isSuccess) {
-                                    markedFinished = false
-                                    viewModel.showClearedProgress()
-                                    clearOpen = false
-                                } else {
-                                    clearError = "Could not clear progress. Please try again."
-                                }
-                            }
-                        }
-                    },
                 )
             }
         }

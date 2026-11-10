@@ -26,6 +26,7 @@ object LibrarySortPreferenceStore {
         when (path.readText(Charsets.UTF_8).trim()) {
             LibrarySort.TitleAz.name -> LibrarySort.TitleAz
             LibrarySort.AuthorAz.name -> LibrarySort.AuthorAz
+            LibrarySort.SeriesAz.name -> LibrarySort.SeriesAz
             LibrarySort.RecentlyAdded.name -> LibrarySort.RecentlyAdded
             LibrarySort.RecentlyPlayed.name -> LibrarySort.RecentlyPlayed
             else -> throw IOException("Unrecognized Library sort preference: $path")

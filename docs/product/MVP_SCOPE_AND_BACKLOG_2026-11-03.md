@@ -37,3 +37,7 @@ conflicts with approved user decisions. It does not replace the original PRD.
 Merge/push of tested source to `main` is authorized by the project owner.
 Do not publish a binary, create a release tag, or claim physical-device certification
 without separate verification and approval.
+
+## Post-MVP Library Simplification
+
+The approved [v2.1 simplification PRD](LIBRARY_SIMPLIFICATION_PRD_v2.1.md) removes Series navigation and the icon-bearing book popup, introduces a flat Series A-Z sort, and adds a centered-title, text-only Book Options screen. This section supersedes the older MVP UI description without rewriting the historical implementation record.

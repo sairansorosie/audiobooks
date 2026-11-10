@@ -28,6 +28,9 @@ These existing screenshots show an earlier version of the interface; updated cap
 
 ## What it does
 
+- One streamlined Library with Title, Author, Series, Recently Added and Recently Played sorting.
+- Book Options is a text-only screen for editing details, finishing or clearing progress.
+
 - Plays audiobooks stored on the phone. Books stay on your device.
 - One audio file = one book. One folder of audio files = one book, played in order (name your files 01, 02, 03… to be safe).
 - Chapters: folder books list their files, single-file books use their embedded chapter tags (MP3 chapter frames, M4B bookmarks).
