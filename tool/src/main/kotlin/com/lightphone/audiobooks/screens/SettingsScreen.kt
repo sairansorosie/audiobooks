@@ -31,6 +31,7 @@ import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
+import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.lightClickable
@@ -83,7 +84,8 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(LightThemeTokens.colors.background),
+                        .background(LightThemeTokens.colors.background)
+                        .padding(top = 1f.gridUnitsAsDp()),
                 ) {
                     LightTopBar(
                         leftButton = LightBarButton.LightIcon(
@@ -128,7 +130,7 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
                         Column {
                             LightText(
                                 text = "Auto-Play",
-                                variant = LightTextVariant.Heading,
+                                variant = LightTextVariant.Copy,
                             )
                             LightText(
                                 text = "next chapter",
@@ -139,7 +141,7 @@ class SettingsScreen(sealedActivity: SealedLightActivity) :
                     }
                     LightText(
                         text = "Sync Library",
-                        variant = LightTextVariant.Heading,
+                        variant = LightTextVariant.Copy,
                         modifier = Modifier
                             .fillMaxWidth()
                             .lightClickable { openScanProgress() }

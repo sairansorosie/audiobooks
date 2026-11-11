@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +24,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.lightphone.audiobooks.AudiobookLibrary
@@ -36,6 +35,8 @@ import com.lightphone.audiobooks.chapterLabel
 import com.lightphone.audiobooks.embeddedChapters
 import com.lightphone.audiobooks.formatSpeed
 import com.lightphone.audiobooks.formatTime
+import com.lightphone.audiobooks.formatRemainingListeningTime
+import com.lightphone.audiobooks.formatChapterTimeRemaining
 import com.lightphone.audiobooks.library.Audiobook
 import com.lightphone.audiobooks.library.AudiobookProgressStore
 import com.lightphone.audiobooks.library.BookMetadataStore
@@ -627,11 +628,9 @@ class PlayerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(LightThemeTokens.colors.background),
+                        .background(LightThemeTokens.colors.background)
+                        .padding(top = 1f.gridUnitsAsDp()),
                 ) {
-                    // Match the Library's two-grid-unit top inset. Both the
-                    // Back and book-options controls share this header container.
-                    Spacer(modifier = Modifier.height(2f.gridUnitsAsDp()))
                     Box(modifier = Modifier.fillMaxWidth()) {
                         LightTopBar(
                             leftButton = LightBarButton.LightIcon(
@@ -667,8 +666,8 @@ class PlayerScreen(
                             LightIcon(
                                 icon = LightIcons.ELLIPSES,
                                 modifier = Modifier.rotate(90f),
-                                // Same SDK icon size as the top bar's Back control.
-                                size = 2f,
+                                // Smaller visual glyph; keep the existing 3-grid touch target.
+                                size = 1.5f,
                                 contentDescription = "More options for ${ui.title}",
                             )
                         }
@@ -761,7 +760,7 @@ class PlayerScreen(
     }
 
     private fun openChapters() {
-        navigateTo(screenFactory = { ChaptersPickerScreen(it, book) }) { index ->
+        navigateTo(screenFactory = { ChaptersPickerScreen(it, book, viewModel.ui) }) { index ->
             viewModel.jumpToChapter(index)
         }
     }
@@ -830,18 +829,39 @@ private fun PlayerContent(
             onValueChange = onSeekFraction,
             modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
         )
+        // Chapter timestamps retain their source values. The center estimate
+        // is chapter-scoped; the quieter second line is book-scoped.
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            LightText(
-                text = formatTime(position),
-                variant = LightTextVariant.Fine,
-            )
-            LightText(
-                text = formatTime(duration),
-                variant = LightTextVariant.Fine,
-            )
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                LightText(text = formatTime(position), variant = LightTextVariant.Detail)
+            }
+            Box(modifier = Modifier.weight(2f), contentAlignment = Alignment.Center) {
+                formatRemainingListeningTime(duration, position, state.speed)?.let { remaining ->
+                    LightText(
+                        text = "$remaining left",
+                        variant = LightTextVariant.Fine,
+                        align = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                LightText(text = formatTime(duration), variant = LightTextVariant.Detail)
+            }
+        }
+        if (showChapter) {
+            formatRemainingListeningTime(state.durationMs, state.positionMs, state.speed)?.let { remaining ->
+                LightText(
+                    text = "$remaining left in book",
+                    variant = LightTextVariant.Detail,
+                    align = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
         }
 
         state.error?.let { error ->

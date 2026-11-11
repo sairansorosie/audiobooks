@@ -91,9 +91,8 @@ class SpeedPickerScreen(sealedActivity: SealedLightActivity) :
                     viewModel.speeds.forEach { speed ->
                         LightText(
                             text = formatSpeed(speed),
-                            // Heading = the settings row size; matches the
-                            // podcast player's speed panel text.
-                            variant = LightTextVariant.Heading,
+                            // Standard LightOS menu option typography.
+                            variant = LightTextVariant.Copy,
                             underline = speed == current,
                             modifier = Modifier
                                 .fillMaxWidth()

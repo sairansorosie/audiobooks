@@ -17,6 +17,44 @@ fun formatTime(milliseconds: Long): String {
     }
 }
 
+
+/**
+ * Estimated wall-clock listening time left in the *currently displayed chapter*.
+ * The player already derives chapter-scoped position/duration for its timestamps.
+ * Dividing unplayed media time by the current speed yields real listening time.
+ * Returns null if duration or speed is unknown; never invent a duration.
+ * Round up to minutes so a positive remainder never appears as zero minutes.
+ */
+fun formatChapterTimeRemaining(durationMs: Long, positionMs: Long, speed: Float): String? {
+    if (durationMs <= 0L || !speed.isFinite() || speed <= 0f) return null
+    val unplayedMs = durationMs - positionMs.coerceIn(0L, durationMs)
+    val totalMinutes = kotlin.math.ceil(unplayedMs.toDouble() / speed.toDouble() / 60_000.0).toLong()
+    val hours = totalMinutes / 60L
+    val minutes = totalMinutes % 60L
+    return if (hours > 0L) "${hours}h ${minutes}m left" else "${minutes}m left"
+}
+
+/**
+ * Estimated wall-clock time remaining, adjusted for playback speed.
+ * Duration and position are media milliseconds, never wall-clock milliseconds.
+ * Returns null for unknown duration or invalid speed rather than guessing.
+ * Under an hour, show a seconds-resolution countdown (floor, except that
+ * any positive sub-second remainder shows 1s). At one hour or more, round
+ * the estimate up to whole minutes.
+ */
+fun formatRemainingListeningTime(durationMs: Long, positionMs: Long, speed: Float): String? {
+    if (durationMs <= 0L || !speed.isFinite() || speed <= 0f) return null
+    val unplayedMs = durationMs - positionMs.coerceIn(0L, durationMs)
+    val realSeconds = unplayedMs.toDouble() / speed.toDouble() / 1_000.0
+    if (!realSeconds.isFinite() || realSeconds >= Long.MAX_VALUE.toDouble()) return null
+    if (realSeconds >= 3_600.0) {
+        val minutes = kotlin.math.ceil(realSeconds / 60.0).toLong()
+        return "${minutes / 60L}h ${minutes % 60L}m"
+    }
+    val seconds = if (unplayedMs == 0L) 0L else realSeconds.toLong().coerceAtLeast(1L)
+    return "${seconds / 60L}m ${seconds % 60L}s"
+}
+
 /** Formats a speed as "1x", "1.25x", ... (lowercase x). */
 fun formatSpeed(speed: Float): String = "${speed.toString().trimEnd('0').trimEnd('.')}x"
 

@@ -138,10 +138,9 @@ internal fun PlaybackSpeedMenu(
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             playbackSpeedOptions.forEach { speed ->
-                LightText(
+                SelectionEmphasisText(
                     text = formatSpeed(speed),
-                    variant = LightTextVariant.Copy,
-                    underline = speed == selectedSpeed,
+                    selected = speed == selectedSpeed,
                     modifier = Modifier.fillMaxWidth()
                         .lightClickable(onClickLabel = "Set playback speed to ${formatSpeed(speed)}") {
                             onSelect(speed)

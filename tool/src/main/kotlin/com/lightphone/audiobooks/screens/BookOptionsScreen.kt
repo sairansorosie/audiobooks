@@ -33,6 +33,7 @@ import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
+import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.LightTopBar
 import com.thelightphone.sdk.ui.LightTopBarCenter
 import com.thelightphone.sdk.ui.lightClickable
@@ -184,7 +185,8 @@ internal class BookOptionsScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier.fillMaxSize()
-                        .background(LightThemeTokens.colors.background),
+                        .background(LightThemeTokens.colors.background)
+                        .padding(top = 1f.gridUnitsAsDp()),
                 ) {
                     LightTopBar(
                         leftButton = LightBarButton.LightIcon(

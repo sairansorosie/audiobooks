@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -292,6 +293,7 @@ class LibraryScreen(private val audioActivity: SealedLightActivity) :
                                             text = librarySortLabel(selectedSort),
                                             variant = LightTextVariant.Paragraph,
                                         )
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         LightIcon(
                                             icon = LightIcons.DOWN,
                                             modifier = Modifier.offset(y = (-3).dp),
@@ -388,20 +390,19 @@ private fun LibrarySortMenu(
         properties = PopupProperties(focusable = true),
     ) {
         Column(
-            modifier = Modifier.widthIn(min = 175.dp, max = 230.dp)
+            modifier = Modifier.width(IntrinsicSize.Max)
                 .heightIn(max = anchoredMenuMaxHeight(anchorBounds))
                 .border(1.dp, LightThemeTokens.colors.contentSecondary.copy(alpha = 0.28f))
                 .background(LightThemeTokens.colors.background)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
             listOf(LibrarySort.TitleAz, LibrarySort.AuthorAz, LibrarySort.SeriesAz,
                 LibrarySort.RecentlyAdded, LibrarySort.RecentlyPlayed)
                 .forEach { option ->
-                    LightText(
+                    SelectionEmphasisText(
                         text = librarySortLabel(option),
-                        variant = LightTextVariant.Copy,
-                        underline = selected == option,
+                        selected = selected == option,
                         modifier = Modifier.fillMaxWidth()
                             .lightClickable(onClick = { onSelect(option) })
                             .padding(vertical = 12.dp),
@@ -509,7 +510,7 @@ private fun BookRow(
                         icon = LightIcons.ELLIPSES,
                         modifier = Modifier.rotate(90f)
                             .onGloballyPositioned { rowMenuAnchor = popupAnchorBounds(it) },
-                        size = 1.5f,
+                        size = 1.25f,
                         contentDescription = "More options for ${book.title}",
                     )
                 }

@@ -29,6 +29,7 @@ import com.thelightphone.sdk.ui.LightTextVariant
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
 import com.thelightphone.sdk.ui.LightThemeTokens
+import com.thelightphone.sdk.ui.gridUnitsAsDp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
@@ -75,7 +76,8 @@ class ScanProgressScreen(sealedActivity: SealedLightActivity) :
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(LightThemeTokens.colors.background),
+                        .background(LightThemeTokens.colors.background)
+                        .padding(top = 1f.gridUnitsAsDp()),
                 ) {
                     Column(
                         modifier = Modifier

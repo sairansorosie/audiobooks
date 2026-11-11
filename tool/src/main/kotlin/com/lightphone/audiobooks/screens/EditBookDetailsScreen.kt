@@ -157,7 +157,8 @@ internal class EditBookDetailsScreen(
         val themeColors by LightThemeController.colors.collectAsState()
         LightTheme(colors = themeColors) {
             Column(
-                modifier = Modifier.fillMaxSize().background(LightThemeTokens.colors.background),
+                modifier = Modifier.fillMaxSize().background(LightThemeTokens.colors.background)
+                    .padding(top = 1f.gridUnitsAsDp()),
             ) {
                 LightTopBar(
                     center = LightTopBarCenter.Text("Edit Book Details"),

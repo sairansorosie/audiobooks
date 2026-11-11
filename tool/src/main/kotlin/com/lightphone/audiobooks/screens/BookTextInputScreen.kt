@@ -1,6 +1,7 @@
 package com.lightphone.audiobooks.screens
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -11,6 +12,7 @@ import com.thelightphone.sdk.SimpleLightScreen
 import com.thelightphone.sdk.ui.LightTextInputEditor
 import com.thelightphone.sdk.ui.LightTheme
 import com.thelightphone.sdk.ui.LightThemeController
+import com.thelightphone.sdk.ui.gridUnitsAsDp
 import com.thelightphone.sdk.ui.defaultKeyboardOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -33,7 +35,7 @@ internal class BookTextInputScreen(
                 onSubmit = { goBack(it.toString()) },
                 onBack = { goBack() },
                 keyboardOptionsFlow = keyboardOptions,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(top = 1f.gridUnitsAsDp()),
                 submitLabel = "DONE",
                 singleLine = true,
             )
